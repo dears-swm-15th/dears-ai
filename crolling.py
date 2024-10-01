@@ -45,9 +45,7 @@ try:
 except: 
     print("no such element") #예외처리
 
-data = {
-    "궁금한점 질문답변": {}
-}
+data = {}
 
 board_dict = {
 	"궁금한점 질문답변": "34"
@@ -78,6 +76,9 @@ for board in board_keys:
             cont_author = driver.find_element(By.CLASS_NAME, 'nickname').text
             cont_title = driver.find_element(By.CLASS_NAME, 'title_text').text
             cont_text = driver.find_element(By.CLASS_NAME, 'se-module-text').text
+            cont_comments = driver.find_elements(By.CLASS_NAME, 'text_comment')
+            
+            comments = '\n'.join([comment.text for comment in cont_comments])
 
             # 게시물 작성 날짜가 2021년 이전일 경우 탐색 중지, 다음 게시판으로 이동
             if cont_date[:4] <= '2020':
@@ -85,16 +86,25 @@ for board in board_keys:
             
             # 2020년 이후의 데이터는 data 딕셔너리에 추가
             else:
-                data[board][i] = {
-                    "url": cont_url,
-                    "id": cont_num,
-                    "date": cont_date,
-                    "author": cont_author,
-                    "title": cont_title,
-                    "text": cont_text
-                }
+                data["messages"] = [
+                    {
+                        "role": "system",
+                        "content": "너는 웨딩 관련 정보를 알려주는 Q&A 챗봇이야. 웨딩 커뮤니티 질문 게시판에서 가져온 질문과 응답을 학습해서 답변해줘야 해."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"제목: {cont_title}, 본문: {cont_text}"
+                    },
+                    {
+                        "role": "assistant",
+                        "content": f"댓글 목록: {comments}"
+                    }
+                ]
+
+
+                # data["messages"] = [{"dksd": "dksd"}]
+
         except:
-            print("out")
             pass
 
         print(f"--------------- {i} 번째 게시물 ---------------")
@@ -110,7 +120,9 @@ for board in board_keys:
 
         time.sleep(3)
 
-        # 게시물을 1000개 탐색할 때마다 JSON 파일로 데이터 백업
-        if i % 1000 == 0:
-            with open("./naver_japan_city_review.json", 'w') as f:
-                json.dump(data, f)
+
+        # 게시물을 탐색할 때마다 JSONL 파일에 데이터 추가 및 저장
+        if i % 1 == 0:
+            with open("./data.jsonl", 'a', encoding="UTF-8") as f:
+                f.write(json.dumps(data, ensure_ascii=False) + '\n')
+
